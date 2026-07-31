@@ -14,7 +14,7 @@
 
 ---
 
-## 1. Master System Architecture Diagram
+## 1. Master System Architecture Blueprint
 
 ```mermaid
 graph TD
@@ -70,51 +70,99 @@ graph TD
 
 ---
 
-## 2. Spring Boot Microservices Architecture Breakdown
+## 2. Microservice Ecosystem Architecture Diagram
 
-CareerOS is architected using **Domain-Driven Design (DDD)** principles into 10 decoupled Java 21 microservices located in [`Backend/`](file:///c:/Users/91741/Documents/Dream_NO.1/Backend):
+```mermaid
+graph LR
+    subgraph Edge Layer
+        GW[Spring Cloud API Gateway :8080]
+        Config[Config Server :8888]
+        Registry[Eureka Registry :8761]
+    end
 
-| Microservice | Technology | Port | Architecture & Key Responsibilities |
-| :--- | :--- | :--- | :--- |
-| **API Gateway** | Spring Cloud Gateway | `:8080` | Reactive non-blocking entrypoint. Validates JWT signatures, enforces CORS, applies rate-limiting, and routes requests to microservices. |
-| **Service Registry** | Spring Cloud Eureka | `:8761` | Dynamic service discovery server tracking health and network locations of all registered microservice instances. |
-| **Config Server** | Spring Cloud Config | `:8888` | Centralized cloud configuration server serving environment properties to all microservices. |
-| **Auth Service** | Spring Boot 3 / PostgreSQL | `:8081` | Manages user registration, login, JWT token issuance, refresh tokens, and emits `USER_REGISTERED` Kafka events. |
-| **Profile Service** | Spring Boot 3 / AWS S3 | `:8082` | Candidate profile management (skills, experience, education, projects) and AWS S3 resume file uploads. |
-| **Job Service** | Spring Boot 3 / Flyway | `:8083` | Dual job search engines (JPA Specification & AI RAG) and dual application workflows (Manual & Apply with AI). |
-| **Notification Service** | Spring Boot 3 / RabbitMQ | `:8084` | Asynchronous notification dispatches via RabbitMQ AMQP queues and SMTP email delivery (Mailpit sandbox). |
-| **Audit Service** | Spring Boot 3 / Kafka | `:8085` | Centralized audit telemetry consumer storing structured system events in PostgreSQL with DLQ error handling. |
-| **Common Module** | Java 21 Library | N/A | Shared DTO contracts, custom exceptions, Security Utils, and global response models. |
+    subgraph Business Domains
+        AuthService[Auth Service :8081]
+        ProfileService[Profile Service :8082]
+        JobService[Job Service :8083]
+        NotifService[Notification Service :8084]
+        AuditService[Audit Service :8085]
+        AIService[FastAPI AI Agent :8000]
+    end
+
+    subgraph Persistence & Infrastructure
+        AuthDB[(auth_db)]
+        ProfileDB[(profile_db)]
+        JobDB[(job_db)]
+        AuditDB[(audit_db)]
+        RedisCache[(Redis Cluster)]
+        S3Bucket[AWS S3 Storage]
+    end
+
+    GW --> AuthService
+    GW --> ProfileService
+    GW --> JobService
+    GW --> NotifService
+    GW --> AuditService
+    GW --> AIService
+
+    AuthService --> AuthDB
+    ProfileService --> ProfileDB
+    ProfileService --> RedisCache
+    ProfileService --> S3Bucket
+    JobService --> JobDB
+    JobService --> RedisCache
+    AuditService --> AuditDB
+```
 
 ---
 
-## 3. Dual Messaging Architecture: Apache Kafka vs. RabbitMQ
+## 3. Graphical Messaging Topology: Apache Kafka vs. RabbitMQ
 
-CareerOS uses a **Dual Message Broker Topology** leveraging the distinct strengths of both **Kafka** and **RabbitMQ**:
+```mermaid
+graph TD
+    subgraph Event Producers
+        Auth[Auth Service]
+        Profile[Profile Service]
+        Job[Job Service]
+        AI[AI Agent Service]
+    end
 
+    subgraph High-Throughput Event Streaming: Apache Kafka (:9092)
+        TopicAuth[Topic: careeros.auth.events]
+        TopicJob[Topic: careeros.job.events]
+        TopicAI[Topic: careeros.ai.events]
+        
+        Auth --> TopicAuth
+        Profile --> TopicAuth
+        Job --> TopicJob
+        AI --> TopicAI
+
+        TopicAuth --> AuditConsumer[Audit Consumer: Audit Service]
+        TopicJob --> AuditConsumer
+        TopicAI --> AuditConsumer
+
+        AuditConsumer --> DLQ[Kafka Dead Letter Queue .DLQ]
+    end
+
+    subgraph Reliable Task Queue: RabbitMQ (:5672)
+        Exchange[Direct Exchange: careeros.notification.exchange]
+        QueueEmail[Queue: careeros.notification.email.queue]
+        DLXExchange[DLX: careeros.notification.dlx]
+        
+        Job -->|Trigger Email| Exchange
+        Auth -->|Trigger Welcome Email| Exchange
+        
+        Exchange -->|Routing Key: notify.email| QueueEmail
+        QueueEmail --> NotifConsumer[Notification Worker Service]
+        QueueEmail -.->|Max Retries Exceeded| DLXExchange
+        
+        NotifConsumer --> Mailpit[Mailpit SMTP Sandbox :8025]
+    end
 ```
-[System Events & User Actions]
-       │
-       ├──► Apache Kafka (:9092) ──────► Audit Service (High-throughput event logging & analytics)
-       │    (Topics: careeros.auth.events, careeros.job.events, careeros.ai.events)
-       │
-       └──► RabbitMQ (:5672) ──────────► Notification Service (Reliable async email/SMS dispatches)
-            (Exchange: careeros.notification.exchange | Queue: careeros.notification.queue)
-```
-
-### Why Both Brokers Are Used:
-
-1. **Apache Kafka (High-Throughput Distributed Event Streaming)**:
-   - Used for **immutable audit logs**, candidate behavioral analytics, and AI event streams (`careeros.ai.events`).
-   - Supports event replay, partitioned topics, high concurrency ($100k+\text{ events/sec}$), and idempotent consumer processing.
-
-2. **RabbitMQ (AMQP Asynchronous Message Queue)**:
-   - Used for **targeted, task-based notifications** (welcome emails, job application confirmations, interview reminders).
-   - Features durable direct exchanges (`careeros.notification.exchange`), Dead Letter Exchanges (DLX) for retry handling, and message delivery acknowledgments.
 
 ---
 
-## 4. AI Agent Architecture & 2-Stage RAG Pipeline
+## 4. AI Agent & 2-Stage RAG Pipeline Diagram
 
 ```mermaid
 graph TD
@@ -158,19 +206,34 @@ graph TD
 
 ---
 
-## 5. React 19 Frontend Web Application
+## 5. Graphical React 19 Frontend Page Architecture
 
-The frontend is a modern web application built with **React 19**, **Vite**, **Lucide Icons**, and custom **Glassmorphism CSS styling** located in [`Frontend/`](file:///c:/Users/91741/Documents/Dream_NO.1/Frontend):
+```mermaid
+graph TD
+    User[Candidate User] --> Shell[React 19 App Shell & Glassmorphic Layout]
+    
+    subgraph Authentication & State
+        Shell --> AuthContext[AuthContext Provider]
+    end
+    
+    subgraph Main Navigation Hubs
+        Shell --> Dashboard[Dashboard Page: LinkedIn Jobs Feed & Apply with AI]
+        Shell --> ProfilePage[My Profile Page: Skill Matrix & Resume Upload]
+        Shell --> JobTracker[Job Tracker Page: Application Kanban Pipeline]
+    end
 
-### **Frontend Features & Page Breakdown**:
-- **LinkedIn-Style Jobs Feed ([DashboardPage.jsx](file:///c:/Users/91741/Documents/Dream_NO.1/Frontend/src/pages/DashboardPage.jsx))**: Live search bar, filter badges (*All Jobs*, *✨ Top AI Match*, *🌐 Remote Only*, *🔖 Saved Jobs*), and company job cards with instant *Apply Now* and *Apply with AI 🪄* buttons.
-- **AI Resume Optimizer ([ResumePage.jsx](file:///c:/Users/91741/Documents/Dream_NO.1/Frontend/src/pages/ResumePage.jsx))**: ATS keyword match analyzer, formatting score breakdown, and STAR bullet point rewriter.
-- **Career Roadmap Generator ([CareerRoadmapPage.jsx](file:///c:/Users/91741/Documents/Dream_NO.1/Frontend/src/pages/CareerRoadmapPage.jsx))**: Interactive 9-month technical skill transition roadmap.
-- **Mock Interview Coach ([InterviewPage.jsx](file:///c:/Users/91741/Documents/Dream_NO.1/Frontend/src/pages/InterviewPage.jsx))**: System design & technical question practice with STAR answer grading.
-- **AI Assistant Chat ([AiChatPage.jsx](file:///c:/Users/91741/Documents/Dream_NO.1/Frontend/src/pages/AiChatPage.jsx))**: Conversational career advice backed by ChromaDB RAG retrieval.
-- **Job Tracker & Applications ([JobTrackerPage.jsx](file:///c:/Users/91741/Documents/Dream_NO.1/Frontend/src/pages/JobTrackerPage.jsx))**: Drag-and-drop interview status tracking (`Applied` $\rightarrow$ `Screening` $\rightarrow$ `Interview` $\rightarrow$ `Offer`).
-- **Audit Logs Stream ([AuditLogsPage.jsx](file:///c:/Users/91741/Documents/Dream_NO.1/Frontend/src/pages/AuditLogsPage.jsx))**: Real-time event log feed streamed from `audit-service`.
-- **Zero-Cost Instant Demo Mode**: Includes deterministic offline mock engines allowing full testing of all 11 pages without needing paid API keys!
+    subgraph AI Career Intelligence Tools
+        Shell --> ResumePage[AI Resume Optimizer: ATS Scoring & STAR Rewriter]
+        Shell --> RoadmapPage[Career Roadmap Page: 9-Month Transition Graph]
+        Shell --> InterviewPage[Mock Interview Coach: STAR Answer Grading]
+        Shell --> AiChatPage[AI Assistant Chat: Conversational RAG Advisor]
+    end
+
+    subgraph Platform Telemetry & Management
+        Shell --> AuditLogs[Audit Logs Page: Real-time Kafka Stream Viewer]
+        Shell --> SettingsPage[Settings Page: Dark Mode & Demo Mode Switcher]
+    end
+```
 
 ---
 
