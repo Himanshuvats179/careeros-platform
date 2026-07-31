@@ -1,0 +1,4 @@
+app:
+  notification:
+    rabbitmq-queue: careeros.notification.queue
+    kafka-topic: careeros.notification.events

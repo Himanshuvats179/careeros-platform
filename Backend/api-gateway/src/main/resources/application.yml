@@ -1,0 +1,86 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+      routes:
+        # 1. Auth Service Route
+        - id: auth-service
+          uri: lb://auth-service
+          predicates:
+            - Path=/api/v1/auth/**
+          filters:
+            - JwtAuthenticationFilter
+
+        # 2. Profile Service Route
+        - id: profile-service
+          uri: lb://profile-service
+          predicates:
+            - Path=/api/v1/profiles/**
+          filters:
+            - JwtAuthenticationFilter
+
+        # 3. Audit Service Route
+        - id: audit-service
+          uri: lb://audit-service
+          predicates:
+            - Path=/api/v1/audit/**
+          filters:
+            - JwtAuthenticationFilter
+
+        # 4. Job Service Route
+        - id: job-service
+          uri: lb://job-service
+          predicates:
+            - Path=/api/v1/jobs/**, /api/v1/applications/**
+          filters:
+            - JwtAuthenticationFilter
+
+        # 5. Notification Service Route
+        - id: notification-service
+          uri: lb://notification-service
+          predicates:
+            - Path=/api/v1/notifications/**
+          filters:
+            - JwtAuthenticationFilter
+
+        # 6. AI Agent FastAPI Service Route
+        - id: ai-agent-service
+          uri: ${AI_AGENT_SERVICE_URL:http://localhost:8000}
+          predicates:
+            - Path=/api/v1/ai/**
+          filters:
+            - JwtAuthenticationFilter
+
+app:
+  jwt:
+    secret: careeros-secret-key-must-be-at-least-256-bits-long-for-hmac-sha-security
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE:http://localhost:8761/eureka/}
+    register-with-eureka: true
+    fetch-registry: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,gateway
+  endpoint:
+    health:
+      show-details: always
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html

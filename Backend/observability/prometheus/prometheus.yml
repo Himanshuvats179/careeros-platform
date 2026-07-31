@@ -1,13 +1,90 @@
 global:
   scrape_interval: 15s
   evaluation_interval: 15s
+  external_labels:
+    cluster: careeros-local
+    environment: development
 
 scrape_configs:
-  - job_name: "prometheus"
+  # ─── Prometheus self-monitoring ───────────────────────────────
+  - job_name: prometheus
     static_configs:
       - targets: ["prometheus:9090"]
 
-  - job_name: "auth-service"
-    metrics_path: "/actuator/prometheus"
+  # ─── API Gateway ──────────────────────────────────────────────
+  - job_name: api-gateway
+    metrics_path: /actuator/prometheus
     static_configs:
-      - targets: ["host.docker.internal:8081"]
+      - targets: ["api-gateway:8443"]
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: service
+        replacement: api-gateway
+
+  # ─── Auth Service ──────────────────────────────────────────────
+  - job_name: auth-service
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["auth-service:8080"]
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: service
+        replacement: auth-service
+
+  # ─── Profile Service ───────────────────────────────────────────
+  - job_name: profile-service
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["profile-service:8081"]
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: service
+        replacement: profile-service
+
+  # ─── Notification Service ──────────────────────────────────────
+  - job_name: notification-service
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["notification-service:8082"]
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: service
+        replacement: notification-service
+
+  # ─── Audit Service ─────────────────────────────────────────────
+  - job_name: audit-service
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["audit-service:8083"]
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: service
+        replacement: audit-service
+
+  # ─── Job Service ───────────────────────────────────────────────
+  - job_name: job-service
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["job-service:8084"]
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: service
+        replacement: job-service
+
+  # ─── Service Registry (Eureka) ─────────────────────────────────
+  - job_name: service-registry
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["service-registry:8761"]
+
+  # ─── Config Server ─────────────────────────────────────────────
+  - job_name: config-server
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["config-server:8888"]
+
+  # ─── AI Agent (Python/FastAPI) ─────────────────────────────────
+  - job_name: ai-agent
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["ai-agent:8000"]

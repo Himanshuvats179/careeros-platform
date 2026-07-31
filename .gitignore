@@ -1,29 +1,68 @@
-# Java / Maven
+# ─── Java / Maven ─────────────────────────────────────────
 **/target/
 *.class
 *.jar
 *.war
+*.ear
 
-# IDE
+# ─── IDE ──────────────────────────────────────────────────
 .idea/
 *.iml
 .vscode/
+*.swp
 
-# OS
+# ─── OS ───────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
+desktop.ini
 
-# Environment / secrets
+# ─── Environment / Secrets ────────────────────────────────
 .env
 .env.*
 !.env.example
+*.pem
+*.key
+*.crt
+*.p12
+*.jks
 
-# Logs
+# ─── Logs ─────────────────────────────────────────────────
 *.log
 logs/
+**/logs/
 
-# Docker local data
+# ─── Node / Frontend ──────────────────────────────────────
+node_modules/
+Frontend/dist/
+Frontend/.vite/
+npm-debug.log*
+yarn-error.log*
+
+# ─── Python / AI Agent ────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+AI-Agent/chroma_db/
+AI-Agent/.chroma/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+
+# ─── Docker ───────────────────────────────────────────────
 docker-data/
+.docker/
 
-# Local archives / temporary files
+# ─── Kubernetes secrets (never commit real secrets) ────────
+k8s/02-secrets.yml
+
+# ─── Local archives / temporary files ─────────────────────
 zip/
+*.zip
+*.tar.gz
+
+# ─── ChromaDB local data ──────────────────────────────────
+chroma_data/

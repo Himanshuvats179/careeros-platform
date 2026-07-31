@@ -1,0 +1,4 @@
+app:
+  job:
+    cache-ttl-hours: 1
+    kafka-topic: careeros.job.events

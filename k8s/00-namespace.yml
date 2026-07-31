@@ -1,0 +1,10 @@
+# =============================================================================
+# CareerOS Kubernetes Manifests — Namespace
+# =============================================================================
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: careeros
+  labels:
+    app.kubernetes.io/name: careeros
+    environment: production

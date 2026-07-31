@@ -1,0 +1,118 @@
+# =============================================================================
+# CareerOS — Security Scanning Workflow
+# Runs: Daily + on every push to main
+# Scans: OWASP Dependency Check, Trivy container scan, CodeQL analysis
+# =============================================================================
+name: Security Scanning
+
+on:
+  schedule:
+    - cron: '0 6 * * *'   # Daily at 06:00 UTC
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  # ─── CodeQL — Static Application Security Testing (SAST) ──────────────────
+  codeql:
+    name: 🔍 CodeQL Analysis
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+
+    strategy:
+      matrix:
+        language: [java, javascript]
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+
+      - name: ☕ Set up Java (for Java analysis)
+        if: matrix.language == 'java'
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+          cache: maven
+
+      - name: 🔨 Build for Java analysis
+        if: matrix.language == 'java'
+        working-directory: Backend
+        run: mvn clean compile -DskipTests -B --no-transfer-progress
+
+      - uses: github/codeql-action/analyze@v3
+
+  # ─── OWASP Dependency Check ──────────────────────────────────────────────
+  dependency-check:
+    name: 🛡️ OWASP Dependency Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: ☕ Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+          cache: maven
+
+      - name: 🔍 Run OWASP Dependency Check
+        working-directory: Backend
+        run: |
+          mvn org.owasp:dependency-check-maven:check \
+            -DfailBuildOnCVSS=8 \
+            -DsuppressionFiles=dependency-check-suppressions.xml \
+            --no-transfer-progress
+        continue-on-error: true
+
+      - name: 📤 Upload Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: owasp-report
+          path: Backend/**/target/dependency-check-report.html
+
+  # ─── Trivy — Container Image Vulnerability Scanning ──────────────────────
+  trivy-scan:
+    name: 🐳 Trivy Container Scan
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+
+    strategy:
+      matrix:
+        image: [auth-service, api-gateway, profile-service, job-service, ai-agent, frontend]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 🏗️ Build image for scanning
+        run: |
+          docker build \
+            -f Backend/${{ matrix.image }}/Dockerfile \
+            -t careeros/${{ matrix.image }}:scan \
+            Backend/ || \
+          docker build \
+            -f ${{ matrix.image == 'ai-agent' && 'AI-Agent' || 'Frontend' }}/Dockerfile \
+            -t careeros/${{ matrix.image }}:scan \
+            ${{ matrix.image == 'ai-agent' && 'AI-Agent' || 'Frontend' }}/
+
+      - name: 🔍 Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: careeros/${{ matrix.image }}:scan
+          format: sarif
+          output: trivy-results-${{ matrix.image }}.sarif
+          severity: CRITICAL,HIGH
+          exit-code: '0'
+
+      - name: 📤 Upload Trivy SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-results-${{ matrix.image }}.sarif
+          category: trivy-${{ matrix.image }}

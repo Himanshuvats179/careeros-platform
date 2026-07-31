@@ -20,6 +20,29 @@ services:
       timeout: 5s
       retries: 10
 
+  rabbitmq:
+    image: rabbitmq:4-management
+    container_name: careeros-rabbitmq
+
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+
+    ports:
+      - "${RABBITMQ_PORT}:5672"
+      - "${RABBITMQ_MANAGEMENT_PORT}:15672"
+
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
+    networks:
+      - careeros-network
+
+    healthcheck:
+      test: [ "CMD", "rabbitmq-diagnostics", "check_port_connectivity" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
   prometheus:
     image: prom/prometheus:v3.5.0
     container_name: careeros-prometheus
@@ -51,8 +74,11 @@ services:
       - "${TEMPO_OTLP_HTTP_PORT}:4318"
       - "${TEMPO_OTLP_GRPC_PORT}:4317"
     volumes:
-      - ./observability/tempo/tempo.yml:/etc/tempo/tempo.yml:ro
-      - tempo_data:/var/tempo
+      - ./observability/alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - ./auth-service/logs:/logs/auth-service:ro
+      - ./notification-service/logs:/logs/notification-service:ro
+      - ./profile-service/logs:/logs/profile-service:ro
+
     networks:
       - careeros-network
 
@@ -97,3 +123,4 @@ volumes:
   loki_data:
   tempo_data:
   grafana_data:
+  rabbitmq_data:

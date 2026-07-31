@@ -1,0 +1,25 @@
+# =============================================================================
+# CareerOS Kubernetes — ConfigMap (non-secret environment variables)
+# =============================================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: careeros-config
+  namespace: careeros
+data:
+  # Infrastructure URLs (service DNS within cluster)
+  POSTGRES_HOST: "careeros-postgres"
+  POSTGRES_PORT: "5432"
+  POSTGRES_DB: "careeros"
+  REDIS_HOST: "careeros-redis"
+  REDIS_PORT: "6379"
+  KAFKA_BOOTSTRAP_SERVERS: "careeros-kafka:9092"
+  RABBITMQ_HOST: "careeros-rabbitmq"
+  RABBITMQ_PORT: "5672"
+  # Spring Cloud
+  EUREKA_URL: "http://careeros-service-registry:8761/eureka/"
+  CONFIG_SERVER_URL: "http://careeros-config-server:8888"
+  # AWS Region
+  AWS_REGION: "us-east-1"
+  # Spring profiles
+  SPRING_PROFILES_ACTIVE: "kubernetes"

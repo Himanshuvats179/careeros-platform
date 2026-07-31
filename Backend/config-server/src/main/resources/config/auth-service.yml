@@ -1,0 +1,4 @@
+app:
+  jwt:
+    secret: careeros-secret-key-must-be-at-least-256-bits-long-for-hmac-sha-security
+    expiration-ms: 86400000

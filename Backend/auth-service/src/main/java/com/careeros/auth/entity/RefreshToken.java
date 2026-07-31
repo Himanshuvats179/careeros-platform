@@ -1,53 +1,66 @@
 package com.careeros.auth.entity;
 
 import jakarta.persistence.*;
-import lombok.*;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 @Entity
-@Table(
-        name = "refresh_tokens",
-        indexes = {
-                @Index(name = "idx_refresh_tokens_user_id", columnList = "user_id")
-        }
-)
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
+@Table(name = "refresh_tokens", indexes = {
+        @Index(name = "idx_token_value", columnList = "token", unique = true)
+})
 public class RefreshToken {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Column(name = "token_hash", nullable = false, unique = true, length = 255)
-    private String tokenHash;
+    @Column(nullable = false, unique = true, length = 255)
+    private String token;
 
-    @Column(name = "expires_at", nullable = false)
-    private LocalDateTime expiresAt;
+    @Column(name = "expiry_date", nullable = false)
+    private Instant expiryDate;
 
-    @Builder.Default
-    @Column(nullable = false)
-    private boolean revoked = false;
+    public RefreshToken() {}
 
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+    public RefreshToken(UUID id, User user, String token, Instant expiryDate) {
+        this.id = id;
+        this.user = user;
+        this.token = token;
+        this.expiryDate = expiryDate;
+    }
 
-    @PrePersist
-    void onCreate() {
-        if (id == null) {
-            id = UUID.randomUUID();
-        }
+    public UUID getId() { return id; }
+    public void setId(UUID id) { this.id = id; }
 
-        if (createdAt == null) {
-            createdAt = LocalDateTime.now();
+    public User getUser() { return user; }
+    public void setUser(User user) { this.user = user; }
+
+    public String getToken() { return token; }
+    public void setToken(String token) { this.token = token; }
+
+    public Instant getExpiryDate() { return expiryDate; }
+    public void setExpiryDate(Instant expiryDate) { this.expiryDate = expiryDate; }
+
+    public static RefreshTokenBuilder builder() { return new RefreshTokenBuilder(); }
+
+    public static class RefreshTokenBuilder {
+        private UUID id;
+        private User user;
+        private String token;
+        private Instant expiryDate;
+
+        public RefreshTokenBuilder id(UUID id) { this.id = id; return this; }
+        public RefreshTokenBuilder user(User user) { this.user = user; return this; }
+        public RefreshTokenBuilder token(String token) { this.token = token; return this; }
+        public RefreshTokenBuilder expiryDate(Instant expiryDate) { this.expiryDate = expiryDate; return this; }
+
+        public RefreshToken build() {
+            return new RefreshToken(id, user, token, expiryDate);
         }
     }
 }
