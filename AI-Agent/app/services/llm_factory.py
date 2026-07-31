@@ -7,14 +7,27 @@ from app.utils.logger import logger
 class LLMFactory:
     """
     Unified Factory for AI Model Providers:
-    1. OpenAI (gpt-4o / gpt-4-turbo)
-    2. AWS Bedrock (Claude 3.5 Sonnet / Llama 3)
-    3. Fallback Mock Provider (deterministic offline JSON generator)
+    1. Ollama (local open-source Llama 3 / Mistral / Mixtral models)
+    2. OpenAI (gpt-4o / gpt-4-turbo)
+    3. AWS Bedrock (Claude 3.5 Sonnet / Llama 3)
+    4. Fallback Mock Provider (deterministic offline JSON generator)
     """
 
     @staticmethod
     def get_llm():
-        provider = os.getenv("LLM_PROVIDER", "openai").lower()
+        provider = settings.LLM_PROVIDER.lower()
+
+        if provider == "ollama":
+            try:
+                from langchain_community.chat_models import ChatOllama
+                logger.info(f"Initializing Ollama Local LLM at {settings.OLLAMA_BASE_URL} with model: {settings.OLLAMA_MODEL}")
+                return ChatOllama(
+                    base_url=settings.OLLAMA_BASE_URL,
+                    model=settings.OLLAMA_MODEL,
+                    temperature=settings.TEMPERATURE
+                )
+            except Exception as e:
+                logger.warn(f"Failed to initialize Ollama Chat client ({e}). Falling back to Mock.")
 
         if provider == "bedrock" or settings.USE_AWS_BEDROCK:
             try:
@@ -26,7 +39,7 @@ class LLMFactory:
                     region_name=settings.AWS_REGION
                 )
                 bedrock_client = boto_session.client("bedrock-runtime")
-                model_id = os.getenv("BEDROCK_MODEL_ID", "anthropic.claude-3-5-sonnet-20240620-v1:0")
+                model_id = os.getenv("BEDROCK_MODEL_ID", settings.BEDROCK_MODEL_ID)
                 logger.info(f"Initializing AWS Bedrock LLM with model: {model_id}")
                 return BedrockChat(
                     client=bedrock_client,
