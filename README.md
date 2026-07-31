@@ -14,7 +14,9 @@
 
 ---
 
-## 1. Master System Architecture Blueprint
+## 1. Master System Architecture Diagram
+
+![CareerOS Master System Architecture](system_architecture.png)
 
 ```mermaid
 graph TD
@@ -70,99 +72,9 @@ graph TD
 
 ---
 
-## 2. Microservice Ecosystem Architecture Diagram
+## 2. AI Agent & 2-Stage RAG Architecture Diagram
 
-```mermaid
-graph LR
-    subgraph Edge Layer
-        GW[Spring Cloud API Gateway :8080]
-        Config[Config Server :8888]
-        Registry[Eureka Registry :8761]
-    end
-
-    subgraph Business Domains
-        AuthService[Auth Service :8081]
-        ProfileService[Profile Service :8082]
-        JobService[Job Service :8083]
-        NotifService[Notification Service :8084]
-        AuditService[Audit Service :8085]
-        AIService[FastAPI AI Agent :8000]
-    end
-
-    subgraph Persistence & Infrastructure
-        AuthDB[(auth_db)]
-        ProfileDB[(profile_db)]
-        JobDB[(job_db)]
-        AuditDB[(audit_db)]
-        RedisCache[(Redis Cluster)]
-        S3Bucket[AWS S3 Storage]
-    end
-
-    GW --> AuthService
-    GW --> ProfileService
-    GW --> JobService
-    GW --> NotifService
-    GW --> AuditService
-    GW --> AIService
-
-    AuthService --> AuthDB
-    ProfileService --> ProfileDB
-    ProfileService --> RedisCache
-    ProfileService --> S3Bucket
-    JobService --> JobDB
-    JobService --> RedisCache
-    AuditService --> AuditDB
-```
-
----
-
-## 3. Graphical Messaging Topology: Apache Kafka vs. RabbitMQ
-
-```mermaid
-graph TD
-    subgraph Event Producers
-        Auth[Auth Service]
-        Profile[Profile Service]
-        Job[Job Service]
-        AI[AI Agent Service]
-    end
-
-    subgraph High-Throughput Event Streaming: Apache Kafka (:9092)
-        TopicAuth[Topic: careeros.auth.events]
-        TopicJob[Topic: careeros.job.events]
-        TopicAI[Topic: careeros.ai.events]
-        
-        Auth --> TopicAuth
-        Profile --> TopicAuth
-        Job --> TopicJob
-        AI --> TopicAI
-
-        TopicAuth --> AuditConsumer[Audit Consumer: Audit Service]
-        TopicJob --> AuditConsumer
-        TopicAI --> AuditConsumer
-
-        AuditConsumer --> DLQ[Kafka Dead Letter Queue .DLQ]
-    end
-
-    subgraph Reliable Task Queue: RabbitMQ (:5672)
-        Exchange[Direct Exchange: careeros.notification.exchange]
-        QueueEmail[Queue: careeros.notification.email.queue]
-        DLXExchange[DLX: careeros.notification.dlx]
-        
-        Job -->|Trigger Email| Exchange
-        Auth -->|Trigger Welcome Email| Exchange
-        
-        Exchange -->|Routing Key: notify.email| QueueEmail
-        QueueEmail --> NotifConsumer[Notification Worker Service]
-        QueueEmail -.->|Max Retries Exceeded| DLXExchange
-        
-        NotifConsumer --> Mailpit[Mailpit SMTP Sandbox :8025]
-    end
-```
-
----
-
-## 4. AI Agent & 2-Stage RAG Pipeline Diagram
+![FastAPI AI Agent & 2-Stage RAG Architecture](ai_agent_rag_architecture.png)
 
 ```mermaid
 graph TD
@@ -206,44 +118,54 @@ graph TD
 
 ---
 
-## 5. Graphical React 19 Frontend Page Architecture
+## 3. Comprehensive Technology Stack & Microservice Catalog
 
-```mermaid
-graph TD
-    User[Candidate User] --> Shell[React 19 App Shell & Glassmorphic Layout]
-    
-    subgraph Authentication & State
-        Shell --> AuthContext[AuthContext Provider]
-    end
-    
-    subgraph Main Navigation Hubs
-        Shell --> Dashboard[Dashboard Page: LinkedIn Jobs Feed & Apply with AI]
-        Shell --> ProfilePage[My Profile Page: Skill Matrix & Resume Upload]
-        Shell --> JobTracker[Job Tracker Page: Application Kanban Pipeline]
-    end
+### **Core Platform Technology Stack**
 
-    subgraph AI Career Intelligence Tools
-        Shell --> ResumePage[AI Resume Optimizer: ATS Scoring & STAR Rewriter]
-        Shell --> RoadmapPage[Career Roadmap Page: 9-Month Transition Graph]
-        Shell --> InterviewPage[Mock Interview Coach: STAR Answer Grading]
-        Shell --> AiChatPage[AI Assistant Chat: Conversational RAG Advisor]
-    end
-
-    subgraph Platform Telemetry & Management
-        Shell --> AuditLogs[Audit Logs Page: Real-time Kafka Stream Viewer]
-        Shell --> SettingsPage[Settings Page: Dark Mode & Demo Mode Switcher]
-    end
-```
+| Technology Layer | Tool / Framework | Version / Provider | Architectural Purpose |
+| :--- | :--- | :--- | :--- |
+| **Backend Microservices** | Spring Boot | `3.4.1` (Java 21) | Core domain business services, REST APIs, & JPA transaction boundaries. |
+| **Service Discovery** | Spring Cloud Eureka | `2024.0.0` | Dynamic service registration & network address resolution. |
+| **Config Server** | Spring Cloud Config | `2024.0.0` | Centralized git/file configuration management. |
+| **API Gateway** | Spring Cloud Gateway | `2024.0.0` | Non-blocking reactive gateway, JWT security, & route proxying. |
+| **AI Agent Microservice** | FastAPI / Python | `0.110.0` / `3.12` | 19-module Clean Architecture multi-agent system & RAG pipeline. |
+| **Vector DB** | ChromaDB | `0.4.24` | Local & embedded persistent vector embeddings index. |
+| **CrossEncoder Reranker**| SentenceTransformers | `ms-marco-MiniLM-L-6-v2` | Stage-2 CrossEncoder passage reranking for zero hallucination. |
+| **LLM Provider Engine** | Ollama / OpenAI / AWS Bedrock | Llama 3 / GPT-4o / Claude 3.5 | Provider-agnostic LLM inference with offline mock fallback. |
+| **Frontend Web App** | React 19 / Vite | `19.0.0` / `6.4.3` | Modern executive web dashboard with glassmorphism design system. |
+| **Database Management** | PostgreSQL / Flyway | `16.2` / `10.0` | Relational SQL persistence with automated versioned migrations. |
+| **Caching Layer** | Redis | `7.2` | Profile caching & vector semantic similarity query cache ($<20\text{ms}$). |
+| **Event Streaming** | Apache Kafka | `3.7` | High-throughput distributed event streaming for audit telemetry. |
+| **Message Queue** | RabbitMQ | `3.13` | Reliable AMQP queue for asynchronous email/SMS notifications. |
+| **Email Sandbox** | Mailpit | `1.15` | Developer local SMTP sandbox for testing email dispatches. |
+| **Containerization** | Docker & Docker Compose | `24.0` | 24-container multi-stage enterprise orchestration stack. |
 
 ---
 
-## 6. Quick Start: Running the Full Stack
+## 4. Microservice Catalog & Port Reference Table
+
+| Service Name | Port | Description & Responsibilities |
+| :--- | :--- | :--- |
+| **API Gateway** | `:8080` | Entrypoint routing `/api/v1/*` endpoints, enforcing JWT security and CORS. |
+| **Auth Service** | `:8081` | User registration, login, JWT token issuance, and password security. |
+| **Profile Service** | `:8082` | Candidate profile management, skill matrices, experience, & AWS S3 resume uploads. |
+| **Job Service** | `:8083` | Dual job search (JPA Specs & AI RAG) and dual application models (Manual & Apply with AI). |
+| **Notification Service** | `:8084` | Consumes RabbitMQ queues & delivers emails via Mailpit SMTP. |
+| **Audit Service** | `:8085` | Consumes Kafka topics (`careeros.*.events`) storing structured system audit logs. |
+| **Eureka Service Registry**| `:8761` | Live dashboard showing all registered active microservices. |
+| **Config Server** | `:8888` | Serves property configurations to Java microservices. |
+| **FastAPI AI Agent** | `:8000` | Multi-agent orchestrator, 2-Stage RAG engine, ATS scoring, & roadmap generator. |
+| **React Frontend** | `:3000` | Executive web portal with 11 pages and zero-cost offline demo mode. |
+
+---
+
+## 5. Quick Start: Running the Full Stack
 
 ### **Option A: Run Full Stack with Docker Compose**
 ```bash
 docker compose up -d --build
 ```
-Dashboard endpoints:
+Access points:
 - **React Frontend**: `http://localhost:3000`
 - **Spring Cloud Gateway**: `http://localhost:8080`
 - **FastAPI AI Agent OpenAPI Docs**: `http://localhost:8000/docs`
@@ -268,7 +190,7 @@ npm run dev
 
 ---
 
-## 7. Master Documentation Architecture Files
+## 6. Master Documentation Architecture Files
 
 - **[Master System Architecture Guide](file:///c:/Users/91741/Documents/Dream_NO.1/ARCHITECTURE.md)**
 - **[AI Agent Master Architecture](file:///c:/Users/91741/Documents/Dream_NO.1/AI-Agent/ARCHITECTURE.md)**
