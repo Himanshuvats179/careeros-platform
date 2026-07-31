@@ -7,6 +7,7 @@
 [![React 19](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
 [![Docker](https://img.shields.io/badge/Docker-24.0-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
 [![Apache Kafka](https://img.shields.io/badge/Apache_Kafka-3.7-231F20?style=for-the-badge&logo=apachekafka&logoColor=white)](https://kafka.apache.org/)
+[![RabbitMQ](https://img.shields.io/badge/RabbitMQ-3.13-FF6600?style=for-the-badge&logo=rabbitmq&logoColor=white)](https://www.rabbitmq.com/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16.2-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 
 **CareerOS** is an enterprise-grade, event-driven AI platform built with **10 Spring Boot 3 Java 21 microservices**, a **FastAPI Python 3.12 Multi-Agent AI Service**, a **2-Stage RAG Pipeline**, **Apache Kafka**, **RabbitMQ**, **Redis**, **PostgreSQL**, **ChromaDB**, and a **React 19 Frontend**.
@@ -69,7 +70,51 @@ graph TD
 
 ---
 
-## 2. AI Agent Architecture with 2-Stage RAG Pipeline
+## 2. Spring Boot Microservices Architecture Breakdown
+
+CareerOS is architected using **Domain-Driven Design (DDD)** principles into 10 decoupled Java 21 microservices located in [`Backend/`](file:///c:/Users/91741/Documents/Dream_NO.1/Backend):
+
+| Microservice | Technology | Port | Architecture & Key Responsibilities |
+| :--- | :--- | :--- | :--- |
+| **API Gateway** | Spring Cloud Gateway | `:8080` | Reactive non-blocking entrypoint. Validates JWT signatures, enforces CORS, applies rate-limiting, and routes requests to microservices. |
+| **Service Registry** | Spring Cloud Eureka | `:8761` | Dynamic service discovery server tracking health and network locations of all registered microservice instances. |
+| **Config Server** | Spring Cloud Config | `:8888` | Centralized cloud configuration server serving environment properties to all microservices. |
+| **Auth Service** | Spring Boot 3 / PostgreSQL | `:8081` | Manages user registration, login, JWT token issuance, refresh tokens, and emits `USER_REGISTERED` Kafka events. |
+| **Profile Service** | Spring Boot 3 / AWS S3 | `:8082` | Candidate profile management (skills, experience, education, projects) and AWS S3 resume file uploads. |
+| **Job Service** | Spring Boot 3 / Flyway | `:8083` | Dual job search engines (JPA Specification & AI RAG) and dual application workflows (Manual & Apply with AI). |
+| **Notification Service** | Spring Boot 3 / RabbitMQ | `:8084` | Asynchronous notification dispatches via RabbitMQ AMQP queues and SMTP email delivery (Mailpit sandbox). |
+| **Audit Service** | Spring Boot 3 / Kafka | `:8085` | Centralized audit telemetry consumer storing structured system events in PostgreSQL with DLQ error handling. |
+| **Common Module** | Java 21 Library | N/A | Shared DTO contracts, custom exceptions, Security Utils, and global response models. |
+
+---
+
+## 3. Dual Messaging Architecture: Apache Kafka vs. RabbitMQ
+
+CareerOS uses a **Dual Message Broker Topology** leveraging the distinct strengths of both **Kafka** and **RabbitMQ**:
+
+```
+[System Events & User Actions]
+       │
+       ├──► Apache Kafka (:9092) ──────► Audit Service (High-throughput event logging & analytics)
+       │    (Topics: careeros.auth.events, careeros.job.events, careeros.ai.events)
+       │
+       └──► RabbitMQ (:5672) ──────────► Notification Service (Reliable async email/SMS dispatches)
+            (Exchange: careeros.notification.exchange | Queue: careeros.notification.queue)
+```
+
+### Why Both Brokers Are Used:
+
+1. **Apache Kafka (High-Throughput Distributed Event Streaming)**:
+   - Used for **immutable audit logs**, candidate behavioral analytics, and AI event streams (`careeros.ai.events`).
+   - Supports event replay, partitioned topics, high concurrency ($100k+\text{ events/sec}$), and idempotent consumer processing.
+
+2. **RabbitMQ (AMQP Asynchronous Message Queue)**:
+   - Used for **targeted, task-based notifications** (welcome emails, job application confirmations, interview reminders).
+   - Features durable direct exchanges (`careeros.notification.exchange`), Dead Letter Exchanges (DLX) for retry handling, and message delivery acknowledgments.
+
+---
+
+## 4. AI Agent Architecture & 2-Stage RAG Pipeline
 
 ```mermaid
 graph TD
@@ -113,50 +158,39 @@ graph TD
 
 ---
 
-## 3. Microservice Catalog & Port Reference Table
+## 5. React 19 Frontend Web Application
 
-| Service Name | Technology Stack | Port | Primary Responsibilities |
-| :--- | :--- | :--- | :--- |
-| **Service Registry** | Spring Cloud Eureka | `:8761` | Service discovery and health registration for microservices. |
-| **Config Server** | Spring Cloud Config | `:8888` | Centralized git/file configuration management. |
-| **API Gateway** | Spring Cloud Gateway | `:8080` | Reactive gateway routing, JWT validation, and rate limiting. |
-| **Auth Service** | Spring Boot 3 / PostgreSQL | `:8081` | JWT authentication, user registration, and security token issuance. |
-| **Profile Service** | Spring Boot 3 / AWS S3 | `:8082` | Candidate profile management, experience tracking, and S3 resume uploads. |
-| **Job Service** | Spring Boot 3 / Flyway | `:8083` | Dynamic JPA job search, traditional applications, & Feign AI Apply flows. |
-| **Notification Service** | Spring Boot 3 / RabbitMQ | `:8084` | Asynchronous email/SMS dispatches via RabbitMQ and Mailpit. |
-| **Audit Service** | Spring Boot 3 / Kafka | `:8085` | Centralized audit log streaming and operational telemetry storage. |
-| **AI-Agent Microservice** | FastAPI / ChromaDB | `:8000` | Clean Architecture 19-module multi-agent system, RAG, and LLM factory. |
-| **Frontend Web App** | React 19 / Vite | `:3000` | Executive web portal with 11 pages and zero-cost offline demo mode. |
+The frontend is a modern web application built with **React 19**, **Vite**, **Lucide Icons**, and custom **Glassmorphism CSS styling** located in [`Frontend/`](file:///c:/Users/91741/Documents/Dream_NO.1/Frontend):
 
----
-
-## 4. Key Platform Features
-
-- **Dual Job Search Engines**: Traditional manual JPA Specification dynamic filtering coexisting with AI conversational intent-based RAG search.
-- **Dual Job Application Workflows**: Traditional manual resume submission coexisting with **Apply with AI 🪄** (ATS compatibility scoring, resume optimization, and candidate approval confirmation flow).
-- **2-Stage Hybrid RAG Pipeline**: Bi-Encoder vector search + Stage-2 CrossEncoder reranking (`ms-marco-MiniLM-L-6-v2`) for zero-hallucination grounded responses.
-- **Vector Semantic Cache**: Redis-backed cosine similarity cache returning semantically identical query responses in $<20\text{ms}$ ($O(1)$ latency).
-- **Provider-Agnostic LLM Engine**: Swappable LLM providers (**Ollama local Llama 3**, **OpenAI GPT-4o**, **AWS Bedrock Claude 3.5**) via environment settings.
-- **Zero-Cost Instant Demo Mode**: Ships with deterministic offline mock fallbacks for all AI endpoints, enabling immediate offline demos without paid API keys.
+### **Frontend Features & Page Breakdown**:
+- **LinkedIn-Style Jobs Feed ([DashboardPage.jsx](file:///c:/Users/91741/Documents/Dream_NO.1/Frontend/src/pages/DashboardPage.jsx))**: Live search bar, filter badges (*All Jobs*, *✨ Top AI Match*, *🌐 Remote Only*, *🔖 Saved Jobs*), and company job cards with instant *Apply Now* and *Apply with AI 🪄* buttons.
+- **AI Resume Optimizer ([ResumePage.jsx](file:///c:/Users/91741/Documents/Dream_NO.1/Frontend/src/pages/ResumePage.jsx))**: ATS keyword match analyzer, formatting score breakdown, and STAR bullet point rewriter.
+- **Career Roadmap Generator ([CareerRoadmapPage.jsx](file:///c:/Users/91741/Documents/Dream_NO.1/Frontend/src/pages/CareerRoadmapPage.jsx))**: Interactive 9-month technical skill transition roadmap.
+- **Mock Interview Coach ([InterviewPage.jsx](file:///c:/Users/91741/Documents/Dream_NO.1/Frontend/src/pages/InterviewPage.jsx))**: System design & technical question practice with STAR answer grading.
+- **AI Assistant Chat ([AiChatPage.jsx](file:///c:/Users/91741/Documents/Dream_NO.1/Frontend/src/pages/AiChatPage.jsx))**: Conversational career advice backed by ChromaDB RAG retrieval.
+- **Job Tracker & Applications ([JobTrackerPage.jsx](file:///c:/Users/91741/Documents/Dream_NO.1/Frontend/src/pages/JobTrackerPage.jsx))**: Drag-and-drop interview status tracking (`Applied` $\rightarrow$ `Screening` $\rightarrow$ `Interview` $\rightarrow$ `Offer`).
+- **Audit Logs Stream ([AuditLogsPage.jsx](file:///c:/Users/91741/Documents/Dream_NO.1/Frontend/src/pages/AuditLogsPage.jsx))**: Real-time event log feed streamed from `audit-service`.
+- **Zero-Cost Instant Demo Mode**: Includes deterministic offline mock engines allowing full testing of all 11 pages without needing paid API keys!
 
 ---
 
-## 5. Quick Start: Running the Full Stack
+## 6. Quick Start: Running the Full Stack
 
 ### **Option A: Run Full Stack with Docker Compose**
 ```bash
 docker compose up -d --build
 ```
-Access points:
-- **Frontend App**: `http://localhost:3000`
-- **API Gateway**: `http://localhost:8080`
-- **AI Agent OpenAPI Docs**: `http://localhost:8000/docs`
-- **Eureka Dashboard**: `http://localhost:8761`
+Dashboard endpoints:
+- **React Frontend**: `http://localhost:3000`
+- **Spring Cloud Gateway**: `http://localhost:8080`
+- **FastAPI AI Agent OpenAPI Docs**: `http://localhost:8000/docs`
+- **Eureka Service Registry**: `http://localhost:8761`
 - **Kafka UI**: `http://localhost:8088`
+- **Mailpit Email Sandbox**: `http://localhost:8025`
 
 ### **Option B: Run Services Locally for Development**
 ```bash
-# 1. Build and package all Java Microservices
+# 1. Package Java Microservices
 cd Backend
 .\mvnw.cmd clean package -DskipTests
 
@@ -171,9 +205,9 @@ npm run dev
 
 ---
 
-## 6. Architecture & Operations Documentation
+## 7. Master Documentation Architecture Files
 
-- **[Master System Architecture](file:///c:/Users/91741/Documents/Dream_NO.1/ARCHITECTURE.md)**
+- **[Master System Architecture Guide](file:///c:/Users/91741/Documents/Dream_NO.1/ARCHITECTURE.md)**
 - **[AI Agent Master Architecture](file:///c:/Users/91741/Documents/Dream_NO.1/AI-Agent/ARCHITECTURE.md)**
 - **[AI Agent Service Guide & Interview Q&A](file:///c:/Users/91741/Documents/Dream_NO.1/AI-Agent/SERVICE_GUIDE.md)**
 - **[Job Service Architecture & Guide](file:///c:/Users/91741/Documents/Dream_NO.1/Backend/job-service/SERVICE_GUIDE.md)**
